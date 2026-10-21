@@ -1,0 +1,7 @@
+model,reported_accuracy,reported_macro_f1,reported_weighted_f1,evaluation_note
+Naive Bayes,0.75,0.66,0.74,local training
+Logistic regression,0.76,0.64,0.74,local training
+Pretrained BERT,0.65,0.51,0.61,external checkpoint
+Frozen BERT,0.68,0.61,0.68,head-only training
+Fully fine-tuned BERT,0.87,0.84,0.87,full training
+FinBERT,0.89,0.88,0.89,possible evaluation-corpus overlap
