@@ -1,0 +1,5 @@
+data/all-data.csv
+results_frozen/
+results_unfrozen/
+.ipynb_checkpoints/
+__pycache__/
