@@ -1,0 +1,7 @@
+model,accuracy,macro_f1,weighted_f1,evidence,note
+Naive Bayes,0.7463917525773196,0.6565052631578947,0.738541247965274,user-supplied MPS export,original split; duplicate texts retained
+Logistic regression,0.7608247422680412,0.6396253926209913,0.7364864834050958,user-supplied MPS export,original split; duplicate texts retained
+Off-the-shelf BERT,0.6536082474226804,0.510465871331279,0.6080445185065999,user-supplied MPS export,original split; duplicate texts retained
+Frozen BERT,0.6865979381443299,0.6101334310020875,0.6774300942861415,user-supplied MPS export,original split; duplicate texts retained
+Fine-tuned BERT,0.8412371134020619,0.8198755317487486,0.8438723240075457,user-supplied MPS export,original split; duplicate texts retained
+External FinBERT (possible training overlap),0.8907216494845361,0.8777671773245768,0.8924021173368722,user-supplied MPS export,possible evaluation-corpus overlap

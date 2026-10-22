@@ -1,0 +1,19 @@
+{
+  "checked_at_utc": "2026-10-22T21:35:42.455429+00:00",
+  "export_sha256": "7532577a7ab4aed1f7a6f166742f9072c504b83801d4fb2a93f4cf19d9fcbd44",
+  "source": "User-supplied MPS rerun export; this session did not execute the training runs.",
+  "checks": "Dataset hash/revisions, exact traditional baselines, class supports, aggregate arithmetic, ten evaluation epochs, and minimum-validation-loss checkpoint selection agree.",
+  "selected_checkpoints": {
+    "frozen": {
+      "epoch": 10.0,
+      "step": 460,
+      "validation_loss": 0.7001593112945557
+    },
+    "full": {
+      "epoch": 1.0,
+      "step": 46,
+      "validation_loss": 0.3955765664577484
+    }
+  },
+  "limitation": "Raw predictions, model weights and the executed notebook were not supplied; aggregate consistency does not independently verify execution or per-example outputs."
+}

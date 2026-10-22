@@ -14,6 +14,20 @@ Classify financial-news sentiment while evaluating minority-class performance an
 - Use ten epochs, batch size 32, epoch-level validation and best-validation-loss checkpoint selection.
 - Inspect external FinBERT separately because training-corpus overlap may affect its evaluation.
 
+## MPS rerun results — October 22, 2026
+| Model | Accuracy | Macro F1 | Weighted F1 |
+| --- | ---: | ---: | ---: |
+| Naive Bayes | 0.7464 | 0.6565 | 0.7385 |
+| Logistic regression | 0.7608 | 0.6396 | 0.7365 |
+| Off-the-shelf BERT | 0.6536 | 0.5105 | 0.6080 |
+| Frozen BERT | 0.6866 | 0.6101 | 0.6774 |
+| Fine-tuned BERT | 0.8412 | 0.8199 | 0.8439 |
+| External FinBERT (possible training overlap) | 0.8907 | 0.8778 | 0.8924 |
+
+The user-supplied MPS export records ten completed epochs for head-only adaptation and full fine-tuning on the original 485-example test split. Fine-tuned BERT reached 0.8412 accuracy, 0.8199 macro F1 and 0.8439 weighted F1, compared with historical rounded values 0.87, 0.84 and 0.87. The rerun improves accuracy by 8.04 percentage points over logistic regression. Validation loss selected epoch 1 for the full model (0.3956); later validation losses increased as training loss fell, indicating overfitting. Head-only adaptation selected epoch 10. Aggregate arithmetic, dataset hash, checkpoint revisions, baseline reports and logged checkpoint selection were checked. Raw predictions, model weights and the executed notebook were not supplied, so the training was not independently replayed here. Two unique test sentences also occur in training, and external FinBERT may have seen the evaluation corpus.
+
+The traditional classifiers also matched an independent local rerun exactly. See [supplied MPS metrics](reports/gpu_rerun_metrics.json), [aggregate checks](reports/rerun_validation.json), and [baseline validation](reports/baseline_rerun_metrics.json). The full-model training logged 312.6 seconds and the frozen model 126.2 seconds on MPS. The Colab launcher remains untested here.
+
 ## Original Test Results
 | Model | Accuracy | Macro F1 | Weighted F1 |
 |---|---:|---:|---:|
@@ -25,12 +39,8 @@ Classify financial-news sentiment while evaluating minority-class performance an
 
 FinBERT reported 0.89 accuracy, 0.88 macro F1 and 0.89 weighted F1, but its training history may overlap this Financial PhraseBank evaluation corpus. Treat it as a separate, potentially contaminated comparison. Exact overlap was not audited.
 
-Full fine-tuning improved rounded accuracy by about 11 percentage points over logistic regression. These are retained reports from the supplied run, not newly reproduced outcomes.
+These rounded reports describe the original run; the new MPS export above is kept separately. The original run environment and causes of the differences were not isolated experimentally.
 
-## Verified baselines and accelerator preparation
-On October 22, 2026, the original dataset, sample and split were reproduced. Naive Bayes achieved 0.7464 accuracy / 0.6565 macro F1; logistic regression achieved 0.7608 accuracy / 0.6396 macro F1, matching their historical rounded results. See [baseline validation](reports/baseline_rerun_metrics.json). The dataset contains eight duplicate text rows, and two unique test sentences also occur in training. The original split was preserved for reproduction; these overlaps limit independent evaluation.
-
-BERT checkpoint loading and one CPU forward/backward batch completed. Label order was confirmed as negative, neutral, positive. Full training was not rerun: a 32-example, 128-token CPU training batch took 10.53 seconds, suggesting over an hour for the full experiment. The accelerator workflow now pins model revisions, sets seed 42, selects by validation loss, retains at most two checkpoints per training run, and exports aggregate metrics. Both Trainer configurations initialized successfully on CPU with verified freeze states. GPU/MPS training and the Colab launcher remain untested here. See [preflight checks](reports/accelerator_preflight.json). Historical BERT metrics above are unchanged.
 
 ## Run on your Mac
 ```bash
@@ -46,9 +56,13 @@ Open [the Colab launcher](https://colab.research.google.com/github/Cameron-Batts
 On a Mac with MPS, use the main notebook. It detects MPS, CUDA or CPU, and stops before BERT inference/training if no accelerator is available. After all experiments finish, the final cell writes `reports/gpu_rerun_metrics.json`; download that file before a hosted runtime expires. Neither data nor model weights are uploaded to GitHub by the notebook.
 
 ## Files
-- `notebooks/financial_sentiment_bert.ipynb`: cleaned workflow and original numerical reports.
+- `notebooks/financial_sentiment_bert.ipynb`: workflow and reports formatted from the supplied MPS export.
 - `reports/financial_sentiment_bert.html`: readable analysis report.
 - `reports/model_comparison.csv`: rounded original metrics and evaluation notes.
+- `reports/gpu_rerun_metrics.json`: original user-supplied MPS export.
+- `reports/rerun_model_comparison.csv`: precise rerun metrics.
+- `reports/rerun_validation.json`: aggregate validation and evidence limits.
+- `validation/verify_rerun.py`: repeatable aggregate validation (`python validation/verify_rerun.py`).
 - `data/README.md`: local data setup and attribution.
 - `requirements.txt`: general dependencies.
 - `requirements-reproduction.txt`: pinned local reproduction packages.
@@ -58,7 +72,7 @@ On a Mac with MPS, use the main notebook. It detects MPS, CUDA or CPU, and stops
 - `portfolio_card.html`: matching portfolio card.
 
 ## Validation and Limitations
-Traditional baselines rerun; BERT training remains historical. Accelerator setup syntax-checked and CPU model setup tested. A single, non-stratified random split does not control duplicated/related news or temporal shift. Test labels include 51 negative, 297 neutral and 137 positive examples. Audit checkpoint label ordering: changing label metadata does not reorder pretrained output weights. A pinned local reproduction environment and fixed model revisions are now provided; Colab uses its existing PyTorch build and records versions. External-model training overlap is possible. No financial returns, production results or future-news accuracy are claimed.
+Traditional baselines independently rerun; the user-supplied MPS export records completed BERT training and was checked for aggregate consistency. The original run remains preserved for comparison. A single, non-stratified random split does not control duplicated/related news or temporal shift. Test labels include 51 negative, 297 neutral and 137 positive examples. Checkpoint label order was checked against the explicit mapping; changing metadata alone does not reorder pretrained output weights. A pinned local reproduction environment and fixed model revisions are now provided; Colab uses its existing PyTorch build and records versions. External-model training overlap is possible. No financial returns, production results or future-news accuracy are claimed.
 
 ## Sources
 Financial PhraseBank: Malo et al. (2014), *Good debt or bad debt: Detecting semantic orientations in economic texts*, https://doi.org/10.1002/asi.23062 . Checkpoint identifiers: `MarieAngeA13/Sentiment-Analysis-BERT` and `ProsusAI/finbert`. Required source identifiers and citations are retained. Observe applicable dataset and checkpoint terms.
