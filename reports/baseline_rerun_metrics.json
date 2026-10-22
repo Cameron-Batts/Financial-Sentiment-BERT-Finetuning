@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-22",
+  "python": "3.12.14",
+  "pandas": "2.2.3",
+  "numpy": "2.3.5",
+  "sklearn": "1.8.0",
+  "dataset_sha256": "cadf7575d2cee573f77d7293337d0bc989c67ab976753f70322d0fae5e8b507d",
+  "dataset_rows": 4846,
+  "sample_rows": 2423,
+  "train_rows": 1453,
+  "validation_rows": 485,
+  "test_rows": 485,
+  "test_class_counts": {
+    "neutral": 297,
+    "positive": 137,
+    "negative": 51
+  },
+  "duplicates_in_full_data": 8,
+  "unique_test_texts_also_in_train": 2,
+  "reports": {
+    "Naive Bayes": {
+      "negative": {
+        "precision": 0.5681818181818182,
+        "recall": 0.49019607843137253,
+        "f1-score": 0.5263157894736842,
+        "support": 51.0
+      },
+      "neutral": {
+        "precision": 0.7957317073170732,
+        "recall": 0.8787878787878788,
+        "f1-score": 0.8352,
+        "support": 297.0
+      },
+      "positive": {
+        "precision": 0.672566371681416,
+        "recall": 0.5547445255474452,
+        "f1-score": 0.608,
+        "support": 137.0
+      },
+      "accuracy": 0.7463917525773196,
+      "macro avg": {
+        "precision": 0.6788266323934358,
+        "recall": 0.6412428275888988,
+        "f1-score": 0.6565052631578947,
+        "support": 485.0
+      },
+      "weighted avg": {
+        "precision": 0.7370127478779328,
+        "recall": 0.7463917525773196,
+        "f1-score": 0.738541247965274,
+        "support": 485.0
+      }
+    },
+    "Logistic regression": {
+      "negative": {
+        "precision": 0.6451612903225806,
+        "recall": 0.39215686274509803,
+        "f1-score": 0.4878048780487805,
+        "support": 51.0
+      },
+      "neutral": {
+        "precision": 0.7612732095490716,
+        "recall": 0.9663299663299664,
+        "f1-score": 0.8516320474777448,
+        "support": 297.0
+      },
+      "positive": {
+        "precision": 0.8051948051948052,
+        "recall": 0.45255474452554745,
+        "f1-score": 0.5794392523364486,
+        "support": 137.0
+      },
+      "accuracy": 0.7608247422680412,
+      "macro avg": {
+        "precision": 0.7372097683554859,
+        "recall": 0.6036805245335373,
+        "f1-score": 0.6396253926209913,
+        "support": 485.0
+      },
+      "weighted avg": {
+        "precision": 0.7614702213488953,
+        "recall": 0.7608247422680412,
+        "f1-score": 0.7364864834050958,
+        "support": 485.0
+      }
+    }
+  },
+  "scope": "Traditional classifiers only. No transformer training, inference or model downloads."
+}

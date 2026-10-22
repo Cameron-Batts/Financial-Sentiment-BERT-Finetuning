@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Financial Sentiment BERT | Cameron Batts</title><style>body{margin:0;background:#f7f8fa;color:#152540;font:16px/1.65 system-ui}main{max-width:950px;margin:auto;padding:32px 24px}h1{font:bold 2.4rem Georgia}h2{border-bottom:2px solid #e8c97a;margin-top:36px}pre{padding:18px;background:white;border-left:3px solid #c9a84c;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}details{margin:16px 0}summary{cursor:pointer}p{overflow-wrap:anywhere}a{color:#1a3560}</style><main><a href="/">← Portfolio</a><h1>Financial Sentiment Classification with BERT Fine-Tuning</h1><p><strong>Cameron Batts</strong></p><p>Python · NLP · Transformers · PyTorch · BERT · FinBERT · scikit-learn</p><h2>Overview</h2><p>Compare bag-of-words classifiers, an off-the-shelf sentiment checkpoint, head-only BERT adaptation and full BERT fine-tuning on financial-news sentiment. Inspect an external FinBERT model separately because its training data may overlap the evaluation corpus.</p><h2>Business context</h2><p>Classifying financial text can help prioritize news for review. Model selection should account for minority-class recall, domain adaptation, compute cost and evaluation independence. This experiment does not measure investment returns or deployed business impact.</p><h2>Data and attribution</h2><p>The supplied Financial PhraseBank-style CSV contains 4,846 labeled sentences. Source: Malo et al. (2014), *Good debt or bad debt: Detecting semantic orientations in economic texts*, https://doi.org/10.1002/asi.23062 . A 50% random sample yields 2,423 sentences. Raw text and saved person-name examples are omitted from this package. Place a permitted copy of `all-data.csv` under `data/` before running.</p><h2>Execution status</h2><p>Selected classification reports are retained from the original completed notebook and rounded to two decimals. The cleaned workflow is syntax-checked, not rerun. Training logs, local paths and saved data excerpts are removed; model checkpoints are not bundled.</p><details><summary>Python code</summary><pre>from pathlib import Path
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Financial Sentiment with BERT | Cameron Batts</title><style>body{margin:0;background:#f7f8fa;color:#152540;font:16px/1.65 system-ui}main{max-width:950px;margin:auto;padding:32px 24px}h1{font:bold 2.4rem Georgia}h2{border-bottom:2px solid #e8c97a;margin-top:36px}pre{padding:18px;background:white;border-left:3px solid #c9a84c;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}details{margin:16px 0}summary{cursor:pointer}p{overflow-wrap:anywhere}a{color:#1a3560}</style></head><body><main><a href="https://cameron-batts.github.io/">← Portfolio</a><h1>Financial Sentiment Classification with BERT Fine-Tuning</h1><p><strong>Cameron Batts</strong></p><p>Python · NLP · Transformers · PyTorch · BERT · FinBERT · scikit-learn</p><h2>Overview</h2><p>Compare bag-of-words classifiers, an off-the-shelf sentiment checkpoint, head-only BERT adaptation and full BERT fine-tuning on financial-news sentiment. Inspect an external FinBERT model separately because its training data may overlap the evaluation corpus.</p><h2>Business context</h2><p>Classifying financial text can help prioritize news for review. Model selection should account for minority-class recall, domain adaptation, compute cost and evaluation independence. This experiment does not measure investment returns or deployed business impact.</p><h2>Data and attribution</h2><p>The supplied Financial PhraseBank-style CSV contains 4,846 labeled sentences. Source: Malo et al. (2014), *Good debt or bad debt: Detecting semantic orientations in economic texts*, https://doi.org/10.1002/asi.23062 . A 50% random sample yields 2,423 sentences. Raw text and saved person-name examples are omitted from this package. Place a permitted copy of <code>all-data.csv</code> under <code>data/</code> before running.</p><h2>Execution status</h2><p>Selected classification reports are retained from the original completed notebook and rounded to two decimals. The traditional-classifier stages have now been rerun; BERT training remains historical until the accelerator run completes. Training logs, local paths and saved data excerpts are removed; model checkpoints are not bundled.</p><h2>Validation update — October 22, 2026</h2><p>The included-data split and traditional classifiers were rerun: Naive Bayes accuracy 0.7464 / macro F1 0.6565, logistic regression accuracy 0.7608 / macro F1 0.6396. These reproduce the original rounded reports. The full file has eight duplicate text rows; two unique test sentences also occur in training. The original split remains unchanged for this reproduction check. BERT model loading and a CPU forward/backward batch were tested separately. Ten-epoch head-only and full fine-tuning have not been rerun, so their retained outputs remain historical. Fixed revisions, explicit seeds, a checked label mapping, limited checkpoint retention and a result export are now configured for an accelerator run. GPU/MPS execution has not been tested here.</p><details><summary>Python code</summary><pre>from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report
@@ -54,7 +54,8 @@ print(classification_report(y_test, y_pred_lr, zero_division=0.0))</pre></detail
 weighted avg       0.76      0.76      0.74       485
 
 </pre><h2>Off-the-shelf sentiment checkpoint</h2><p>Load the checkpoint identifier used in the original analysis. It is a customer-comment sentiment model rather than a financial-domain model. Inference requires downloading model weights. Keep evaluation text local except for model downloads.</p><details><summary>Python code</summary><pre>import torch
-from transformers import pipeline
+from transformers import pipeline, AutoConfig, set_seed
+set_seed(42)
 if torch.backends.mps.is_available():
     device = &#x27;mps&#x27;
 elif torch.cuda.is_available():
@@ -62,7 +63,15 @@ elif torch.cuda.is_available():
 else:
     device = &#x27;cpu&#x27;
 bert_path = &#x27;MarieAngeA13/Sentiment-Analysis-BERT&#x27;
-bert = pipeline(model=bert_path, device=device)
+bert_revision = &#x27;938fb4267e118e6f892d9825253fd28893d95966&#x27;
+finbert_revision = &#x27;0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031&#x27;
+REQUIRE_ACCELERATOR = globals().get(&#x27;REQUIRE_ACCELERATOR&#x27;, True)
+if REQUIRE_ACCELERATOR and device == &#x27;cpu&#x27;:
+    raise RuntimeError(&#x27;Select a GPU runtime or use a Mac with MPS before BERT execution. Baselines can run on CPU.&#x27;)
+checkpoint_config = AutoConfig.from_pretrained(bert_path, revision=bert_revision)
+assert {int(k): v.lower() for k, v in checkpoint_config.id2label.items()} == {0:&#x27;negative&#x27;, 1:&#x27;neutral&#x27;, 2:&#x27;positive&#x27;}
+print(&#x27;Device:&#x27;, device, &#x27;Checkpoint revision:&#x27;, bert_revision)
+bert = pipeline(model=bert_path, device=device, revision=bert_revision)
 </pre></details><details><summary>Python code</summary><pre>y_pred_bert = [pred[&quot;label&quot;] for pred in bert(X_test.to_list())]
 print(classification_report(y_test, y_pred_bert, zero_division=0.0))</pre></details><pre>              precision    recall  f1-score   support
 
@@ -78,7 +87,7 @@ weighted avg       0.63      0.65      0.61       485
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
 
 bert_path = &quot;MarieAngeA13/Sentiment-Analysis-BERT&quot;
-bert_tokenizer = AutoTokenizer.from_pretrained(bert_path)
+bert_tokenizer = AutoTokenizer.from_pretrained(bert_path, revision=bert_revision)
 </pre></details><details><summary>Python code</summary><pre>sentiment2int = {&quot;negative&quot;: 0, &quot;neutral&quot;: 1, &quot;positive&quot;: 2}
 int2sentiment = {value: key for key, value in sentiment2int.items()}</pre></details><details><summary>Python code</summary><pre>def tokenize_and_tensorize(text, labels, tokenizer, label_mapping):
     encodings = tokenizer(
@@ -119,6 +128,7 @@ val_dataset = FinancialNewsDataset(val_encodings, y_val_tensor)
 test_dataset = FinancialNewsDataset(test_encodings, y_test_tensor)
 </pre></details><h2>Head-only adaptation</h2><p>Freeze the BERT base and train its classification head for ten epochs, with batch size 32. Evaluate and save each epoch. With no custom selection metric provided, best-checkpoint loading uses validation loss rather than test scores or macro F1. This selects among saved checkpoints; it does not guarantee absence of overfitting.</p><details><summary>Python code</summary><pre>model_frozen = AutoModelForSequenceClassification.from_pretrained(
     bert_path,
+    revision=bert_revision,
     num_labels=3,
     id2label=int2sentiment,
     label2id=sentiment2int,
@@ -139,7 +149,13 @@ training_args_frozen = TrainingArguments(
     save_strategy=&quot;epoch&quot;,
     load_best_model_at_end=True,
     logging_strategy=&quot;epoch&quot;,
-    report_to=&quot;none&quot;
+    report_to=&quot;none&quot;,
+    seed=42,
+    data_seed=42,
+    metric_for_best_model=&quot;eval_loss&quot;,
+    greater_is_better=False,
+    save_total_limit=2,
+    dataloader_pin_memory=(device == &quot;cuda&quot;)
 )
 
 trainer_frozen = Trainer(
@@ -171,6 +187,7 @@ weighted avg       0.68      0.68      0.68       485
 </pre><h2>Full model fine-tuning</h2><p>Initialize a separate copy and leave all parameters trainable. Use the same epoch count, batch size, validation evaluation and checkpoint selection procedure. GPU acceleration is recommended; checkpoint saving can use substantial disk space.</p><details><summary>Python code</summary><pre>
 model_unfrozen = AutoModelForSequenceClassification.from_pretrained(
     bert_path,
+    revision=bert_revision,
     num_labels=3,
     id2label=int2sentiment,
     label2id=sentiment2int,
@@ -187,7 +204,13 @@ training_args_unfrozen = TrainingArguments(
     save_strategy=&quot;epoch&quot;,
     load_best_model_at_end=True,
     logging_strategy=&quot;epoch&quot;,
-    report_to=&quot;none&quot;
+    report_to=&quot;none&quot;,
+    seed=42,
+    data_seed=42,
+    metric_for_best_model=&quot;eval_loss&quot;,
+    greater_is_better=False,
+    save_total_limit=2,
+    dataloader_pin_memory=(device == &quot;cuda&quot;)
 )
 
 trainer_unfrozen = Trainer(
@@ -217,7 +240,7 @@ print(classification_report(
    macro avg       0.83      0.86      0.84       485
 weighted avg       0.87      0.87      0.87       485
 
-</pre><h2>Main test findings</h2><p>Full fine-tuning achieved reported accuracy 0.87, macro F1 0.84 and weighted F1 0.87. Logistic regression achieved 0.76 accuracy and 0.64 macro F1; head-only adaptation achieved 0.68 accuracy and 0.61 macro F1; the off-the-shelf BERT checkpoint achieved 0.65 accuracy and 0.51 macro F1. Naive Bayes reached 0.75 accuracy and 0.66 macro F1, exceeding logistic regression on the macro measure despite slightly lower accuracy.</p><p>Full fine-tuning&#x27;s reported negative-class recall was 0.86 and positive-class recall was 0.81, compared with 0.39 and 0.45 for logistic regression. The rounded accuracy difference is approximately 11 percentage points. This is a single-split result, not a universal ranking of algorithms or proof of production performance.</p><h2>External FinBERT comparison: possible corpus overlap</h2><p>ProsusAI/finbert is evaluated as a separate external model. The original analysis identifies Financial PhraseBank in its training history. Because the evaluation data comes from that corpus, prior exposure is possible; exact sentence overlap has not been audited here. Its reported 0.89 accuracy must not be treated as independent evidence of generalization or a clean win over locally trained models. Model information: https://huggingface.co/ProsusAI/finbert .</p><details><summary>Python code</summary><pre>finbert = pipeline(model=&quot;ProsusAI/finbert&quot;, device=device)
+</pre><h2>Main test findings</h2><p>Full fine-tuning achieved reported accuracy 0.87, macro F1 0.84 and weighted F1 0.87. Logistic regression achieved 0.76 accuracy and 0.64 macro F1; head-only adaptation achieved 0.68 accuracy and 0.61 macro F1; the off-the-shelf BERT checkpoint achieved 0.65 accuracy and 0.51 macro F1. Naive Bayes reached 0.75 accuracy and 0.66 macro F1, exceeding logistic regression on the macro measure despite slightly lower accuracy.</p><p>Full fine-tuning&#x27;s reported negative-class recall was 0.86 and positive-class recall was 0.81, compared with 0.39 and 0.45 for logistic regression. The rounded accuracy difference is approximately 11 percentage points. This is a single-split result, not a universal ranking of algorithms or proof of production performance.</p><h2>External FinBERT comparison: possible corpus overlap</h2><p>ProsusAI/finbert is evaluated as a separate external model. The original analysis identifies Financial PhraseBank in its training history. Because the evaluation data comes from that corpus, prior exposure is possible; exact sentence overlap has not been audited here. Its reported 0.89 accuracy must not be treated as independent evidence of generalization or a clean win over locally trained models. Model information: https://huggingface.co/ProsusAI/finbert .</p><details><summary>Python code</summary><pre>finbert = pipeline(model=&quot;ProsusAI/finbert&quot;, device=device, revision=finbert_revision)
 
 
 y_pred_finbert = [pred[&quot;label&quot;] for pred in finbert(X_test.to_list())]
@@ -232,4 +255,33 @@ print(classification_report(y_test, y_pred_finbert, zero_division=0.0))
    macro avg       0.85      0.91      0.88       485
 weighted avg       0.90      0.89      0.89       485
 
-</pre><h2>Reproducibility and limitations</h2><p>- Training and evaluation were not rerun; retained reports are rounded, and pretrained revisions and dependencies are unpinned.</p><p>- The original training used MPS and emitted pin-memory warnings; device availability and numerical behavior may differ.</p><p>- The test split is small and imbalanced, without deduplication or a temporal holdout. Repeated random splits and confidence intervals would strengthen conclusions.</p><p>- Audit checkpoint label ordering, specify seeds and model revisions, and record package versions before reproducing.</p><p>- Verify external-model training overlap and evaluate on newly collected, independently labeled financial news before deployment.</p><h2>Author</h2><p>Cameron Batts</p></main></html>
+</pre><h2>Reproducibility and limitations</h2><p>- Traditional classifiers were rerun; BERT/FinBERT retained reports remain historical until the accelerator run completes. Fixed revisions and seed 42 are now configured; GPU results can still vary numerically.
+- The original training used MPS and emitted pin-memory warnings; device availability and numerical behavior may differ.
+- The test split is small and imbalanced, without deduplication or a temporal holdout. Two unique test sentences also occur in training. Repeated random splits and confidence intervals would strengthen conclusions.
+- Checkpoint label order was checked against the explicit mapping. The result-export cell records model revisions, package versions and dataset hash.
+- Verify external-model training overlap and evaluate on newly collected, independently labeled financial news before deployment.</p><h2>Author</h2><p>Cameron Batts</p><details><summary>Python code</summary><pre># Run after all experiments finish. Exports aggregate metrics, not source sentences.
+import json, hashlib, platform
+from importlib.metadata import version
+model_reports = {
+    &#x27;Naive Bayes&#x27;: classification_report(y_test, y_pred_nb, output_dict=True, zero_division=0),
+    &#x27;Logistic regression&#x27;: classification_report(y_test, y_pred_lr, output_dict=True, zero_division=0),
+    &#x27;Off-the-shelf BERT&#x27;: classification_report(y_test, y_pred_bert, output_dict=True, zero_division=0),
+    &#x27;Frozen BERT&#x27;: classification_report(y_test_tensor.numpy(), y_pred_frozen, labels=[0,1,2], target_names=[&#x27;negative&#x27;,&#x27;neutral&#x27;,&#x27;positive&#x27;], output_dict=True, zero_division=0),
+    &#x27;Fine-tuned BERT&#x27;: classification_report(y_test_tensor.numpy(), y_pred_unfrozen, labels=[0,1,2], target_names=[&#x27;negative&#x27;,&#x27;neutral&#x27;,&#x27;positive&#x27;], output_dict=True, zero_division=0),
+    &#x27;External FinBERT (possible training overlap)&#x27;: classification_report(y_test, y_pred_finbert, output_dict=True, zero_division=0),
+}
+record = {
+    &#x27;python&#x27;: platform.python_version(), &#x27;device&#x27;: device,
+    &#x27;versions&#x27;: {p: version(p) for p in [&#x27;numpy&#x27;,&#x27;pandas&#x27;,&#x27;scikit-learn&#x27;,&#x27;torch&#x27;,&#x27;transformers&#x27;,&#x27;accelerate&#x27;]},
+    &#x27;seed&#x27;: 42, &#x27;split_seed&#x27;: 41, &#x27;bert_revision&#x27;: bert_revision, &#x27;finbert_revision&#x27;: finbert_revision,
+    &#x27;dataset_sha256&#x27;: hashlib.sha256((root/&#x27;data/all-data.csv&#x27;).read_bytes()).hexdigest(),
+    &#x27;test_rows&#x27;: len(y_test), &#x27;models&#x27;: model_reports,
+    &#x27;best_validation_checkpoints&#x27;: {&#x27;frozen&#x27;: trainer_frozen.state.best_model_checkpoint, &#x27;full&#x27;: trainer_unfrozen.state.best_model_checkpoint},
+    &#x27;training_logs&#x27;: {&#x27;frozen&#x27;: trainer_frozen.state.log_history, &#x27;full&#x27;: trainer_unfrozen.state.log_history},
+    &#x27;limitations&#x27;: &#x27;Single original split; duplicate texts retained; external FinBERT may have prior exposure to Financial PhraseBank.&#x27;,
+}
+destination = root/&#x27;reports/gpu_rerun_metrics.json&#x27;
+destination.parent.mkdir(parents=True, exist_ok=True)
+destination.write_text(json.dumps(record, indent=2) + &#x27;\n&#x27;)
+print(&#x27;Saved aggregate metrics to:&#x27;, destination)
+</pre></details><p><a href="https://github.com/Cameron-Batts/Financial-Sentiment-BERT-Finetuning">GPU run instructions and baseline validation</a></p></main></body></html>

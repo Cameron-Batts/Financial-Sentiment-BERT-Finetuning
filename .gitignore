@@ -3,3 +3,6 @@ results_frozen/
 results_unfrozen/
 .ipynb_checkpoints/
 __pycache__/
+
+# Keep user-supplied text datasets local regardless of upload filename.
+all-data*.csv

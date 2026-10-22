@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-22",
+  "python": "3.12.14",
+  "device_tested": "cpu",
+  "gpu_training_run": false,
+  "versions": {
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.8.0",
+    "torch": "2.8.0+cpu",
+    "transformers": "4.57.1",
+    "accelerate": "1.11.0"
+  },
+  "bert_revision": "938fb4267e118e6f892d9825253fd28893d95966",
+  "finbert_revision": "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031",
+  "label_mapping_verified": {
+    "0": "negative",
+    "1": "neutral",
+    "2": "positive"
+  },
+  "frozen_base_requires_grad": false,
+  "full_model_all_parameters_trainable": true,
+  "both_trainers_initialized": true,
+  "benchmark": {
+    "batch_size": 32,
+    "sequence_length": 128,
+    "forward_backward_seconds": 10.528517246246338
+  },
+  "limitations": "No 10-epoch training, GPU/MPS execution, or Colab bootstrap execution was performed. The Colab launcher was syntax-checked only."
+}
